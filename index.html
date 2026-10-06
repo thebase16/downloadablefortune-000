@@ -2,25 +2,430 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0" />
-    <title>Fortune's Palette</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#18131f" />
+    <title>Daily Tarot</title>
     <meta
       name="description"
-      content="Daily and weekly tarot readings paired with a custom color palette inspired by your fortune." />
-    <meta
-      name="theme-color"
-      content="#202D42" />
-    <link
-      rel="preload"
-      as="image"
-      href="https://fortunespalette.com/goblin-card-back.png" />
-    <script type="module" crossorigin src="https://fortunespalette.com/assets/index-OaHiPEbz.js"></script>
-    <link rel="stylesheet" crossorigin href="https://fortunespalette.com/assets/index-Bybgzxem.css">
+      content="A single daily tarot draw. No accounts, no three-card spread, just one card for the day." />
+    <style>
+      :root {
+        --bg-1: #130f1d;
+        --bg-2: #1d1828;
+        --bg-3: #261d2e;
+        --panel: rgba(27, 21, 31, 0.8);
+        --panel-border: rgba(202, 167, 123, 0.6);
+        --gold: #f0d7a8;
+        --gold-strong: #c68e57;
+        --ink: #f5f1eb;
+        --muted: #d9c9b5;
+        --shadow: rgba(0, 0, 0, 0.42);
+        --rose: #a7655e;
+        --sage: #6f8571;
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body {
+        margin: 0;
+        min-height: 100%;
+        font-family: Georgia, "Times New Roman", serif;
+        background:
+          radial-gradient(circle at top, rgba(154, 109, 89, 0.28), transparent 20%),
+          radial-gradient(circle at bottom left, rgba(72, 95, 108, 0.28), transparent 26%),
+          linear-gradient(160deg, var(--bg-1) 0%, var(--bg-2) 40%, var(--bg-3) 100%);
+        color: var(--ink);
+      }
+
+      body {
+        display: grid;
+        place-items: center;
+        min-height: 100vh;
+        padding: 32px 20px;
+      }
+
+      .app {
+        width: min(980px, 100%);
+        background: linear-gradient(180deg, rgba(13, 10, 17, 0.9), rgba(26, 18, 28, 0.85));
+        border: 1px solid var(--panel-border);
+        border-radius: 28px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+        padding: 28px 18px 20px;
+      }
+
+      .topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+        position: relative;
+        z-index: 1;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 4vw, 3.2rem);
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--gold);
+        font-weight: 600;
+      }
+
+      .meta {
+        color: var(--muted);
+        font-size: 0.75rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .card-stage {
+        display: grid;
+        place-items: center;
+        min-height: 600px;
+        position: relative;
+        z-index: 1;
+      }
+
+      .card-wrap {
+        position: relative;
+        width: min(360px, 82vw);
+        aspect-ratio: 3 / 5;
+        perspective: 1600px;
+      }
+
+      .card {
+        position: absolute;
+        inset: 0;
+        border-radius: 18px;
+        transform-style: preserve-3d;
+        transition: transform 0.85s cubic-bezier(.2, .8, .2, 1);
+      }
+
+      .card.is-flipped {
+        transform: rotateY(180deg) scale(1.01);
+      }
+
+      .card.reversed .face.front img {
+        transform: rotate(180deg);
+      }
+
+      .face {
+        position: absolute;
+        inset: 0;
+        border-radius: 18px;
+        backface-visibility: hidden;
+        overflow: hidden;
+        box-shadow: none;
+        border: none;
+      }
+
+      .face img {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+      }
+
+      .card.foil .face.front {
+        box-shadow: 0 0 0 2px rgba(255, 232, 170, 0.7), 0 18px 38px rgba(214, 174, 96, 0.34), 0 0 40px rgba(255, 216, 115, 0.14);
+      }
+
+      .card.foil .face.front::before,
+      .card.foil .face.front::after {
+        content: "";
+        position: absolute;
+        inset: -30%;
+        pointer-events: none;
+      }
+
+      .card.foil .face.front::before {
+        background: linear-gradient(
+          120deg,
+          transparent 0%,
+          rgba(255, 255, 255, 0.18) 20%,
+          rgba(255, 255, 255, 0.58) 35%,
+          rgba(255, 255, 255, 0.06) 48%,
+          transparent 62%
+        );
+        transform: translateX(-30%) rotate(10deg);
+        animation: foilShimmer 2.6s ease-in-out infinite alternate;
+      }
+
+      .card.foil .face.front::after {
+        inset: 8px;
+        border: 1px solid rgba(255, 229, 158, 0.8);
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      @keyframes foilShimmer {
+        0% { transform: translateX(-35%) rotate(10deg); opacity: 0.2; }
+        100% { transform: translateX(35%) rotate(10deg); opacity: 0.9; }
+      }
+
+      .back {
+        background:
+          radial-gradient(circle at center, rgba(248, 234, 212, 0.18), transparent 52%),
+          linear-gradient(145deg, #4d2d2b 0%, #2a1d2d 26%, #1b1a22 100%);
+        transform: rotateY(0deg);
+      }
+
+      .back::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border: none;
+        background: rgba(46, 28, 28, 0.15);
+        box-shadow: none;
+      }
+
+      .back::after {
+        content: "✦";
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        font-size: clamp(3rem, 10vw, 5rem);
+        color: rgba(240, 215, 168, 0.82);
+      }
+
+      .front {
+        transform: rotateY(180deg);
+        background: linear-gradient(160deg, #f4ead8, #e3d2b5 42%, #d7b98d 100%);
+      }
+
+      .card-content {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        background: linear-gradient(180deg, rgba(19, 16, 20, 0.08), rgba(26, 17, 19, 0.54));
+      }
+
+      .card-text {
+        padding: 20px 20px 18px;
+        background: rgba(32, 20, 20, 0.62);
+        border-top: 1px solid rgba(255,255,255,0.14);
+        backdrop-filter: blur(2px);
+      }
+
+      .card-text .name {
+        margin: 0 0 6px;
+        font-size: clamp(1.5rem, 2vw, 2.1rem);
+        color: #f4e3bb;
+      }
+
+      .card-text .suit {
+        margin: 0 0 10px;
+        color: #dbc5a0;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        font-size: 0.72rem;
+      }
+
+      .card-text p {
+        margin: 0;
+        line-height: 1.7;
+        color: var(--ink);
+        font-size: 0.95rem;
+      }
+
+      .result {
+        max-width: 760px;
+        margin: 12px auto 0;
+        text-align: center;
+        position: relative;
+        z-index: 1;
+      }
+
+      .result h2 {
+        font-size: clamp(1.2rem, 2vw, 1.7rem);
+        margin: 0 0 8px;
+        color: var(--gold);
+        letter-spacing: 0.11em;
+        text-transform: uppercase;
+      }
+
+      .result p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.75;
+      }
+
+      @media (max-width: 640px) {
+        .app { padding: 20px 14px 16px; }
+        .card-wrap {
+          width: min(300px, 80vw);
+          height: 440px;
+        }
+        .card-stage { min-height: 500px; }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <main class="app">
+      <div class="topbar">
+        <h1>Daily Tarot</h1>
+        <div id="dateStamp" class="meta">loading…</div>
+      </div>
+
+      <div class="card-stage">
+        <div class="card-wrap">
+          <div id="card" class="card" aria-live="polite">
+            <div class="face back" aria-hidden="true">
+              <img src="./goblin-card-back.png" alt="Card back" />
+            </div>
+            <div class="face front" aria-hidden="true">
+              <img id="cardImage" src="" alt="Tarot card" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="result">
+        <h2 id="cardTitle">Guidance for today</h2>
+      </div>
+    </main>
+
+    <script>
+      const deck = [
+        { name: 'The Fool', suit: 'Major Arcana', image: './cards/the-fool.jpg', meaning: 'A leap into the unknown. Trust momentum, curiosity, and your instinctive spark.' },
+        { name: 'The Magician', suit: 'Major Arcana', image: './cards/the-magician.jpg', meaning: 'Your skills are ready. Focus intention and use the tools already in your hands.' },
+        { name: 'The High Priestess', suit: 'Major Arcana', image: './cards/the-high-priestess.jpg', meaning: 'Listen to the quiet knowing beneath the noise. Intuition is the wiser guide.' },
+        { name: 'The Empress', suit: 'Major Arcana', image: './cards/the-empress.jpg', meaning: 'Nurture what is growing. Beauty, comfort, and abundance invite patience and care.' },
+        { name: 'The Emperor', suit: 'Major Arcana', image: './cards/the-emperor.jpg', meaning: 'Structure supports freedom. Create clear rules so your ambition can move with ease.' },
+        { name: 'The Hierophant', suit: 'Major Arcana', image: './cards/the-hierophant.jpg', meaning: 'Tradition contains wisdom, but authentic practice still asks for your own discernment.' },
+        { name: 'The Lovers', suit: 'Major Arcana', image: './cards/the-lovers.jpg', meaning: 'Alignment matters. Choices made with honesty, desire, and integrity will lead forward.' },
+        { name: 'The Chariot', suit: 'Major Arcana', image: './cards/the-chariot.jpg', meaning: 'Momentum is yours. Direct your energy with conviction and keep your focus steady.' },
+        { name: 'Strength', suit: 'Major Arcana', image: './cards/strength.jpg', meaning: 'Gentle persistence wins where force alone would lose. Compassion is power.' },
+        { name: 'The Hermit', suit: 'Major Arcana', image: './cards/the-hermit.jpg', meaning: 'A quiet answer is emerging. Step away long enough to hear it clearly.' },
+        { name: 'Wheel of Fortune', suit: 'Major Arcana', image: './cards/wheel-of-fortune.jpg', meaning: 'Cycles are turning. What unfolds now may be larger than your current view.' },
+        { name: 'Justice', suit: 'Major Arcana', image: './cards/justice.jpg', meaning: 'Truth and balance ask for fair-mindedness. Let clarity guide the next step.' },
+        { name: 'The Hanged Man', suit: 'Major Arcana', image: './cards/the-hanged-man.jpg', meaning: 'Pause for perspective. Release the urge to force what needs surrender.' },
+        { name: 'Death', suit: 'Major Arcana', image: './cards/death.jpg', meaning: 'A chapter is ending so another can begin. Let the old pass without resisting it.' },
+        { name: 'Temperance', suit: 'Major Arcana', image: './cards/temperance.jpg', meaning: 'Blend the necessary pieces with patience. Balance creates the right pace.' },
+        { name: 'The Devil', suit: 'Major Arcana', image: './cards/the-devil.jpg', meaning: 'Attachment may be shaping the story. Notice what you are clinging to, and choose wisdom.' },
+        { name: 'The Tower', suit: 'Major Arcana', image: './cards/the-tower.jpg', meaning: 'Disruption clears false structures. What cracks open can free a truer path.' },
+        { name: 'The Star', suit: 'Major Arcana', image: './cards/the-star.jpg', meaning: 'Hope is not passive; it restores. Let trust become your guiding light.' },
+        { name: 'The Moon', suit: 'Major Arcana', image: './cards/the-moon.jpg', meaning: 'Not everything is fully visible yet. Move carefully, trust your instincts, and honor uncertainty.' },
+        { name: 'The Sun', suit: 'Major Arcana', image: './cards/the-sun.jpg', meaning: 'Warmth and clarity are available. Let explicit joy, confidence, and honesty lead.' },
+        { name: 'Judgement', suit: 'Major Arcana', image: './cards/judgement.jpg', meaning: 'A summons to renewal. Answer honestly, then move forward without carrying old weight.' },
+        { name: 'The World', suit: 'Major Arcana', image: './cards/the-world.jpg', meaning: 'Completion has arrived in some form. Celebrate the threshold and carry the lesson forward.' },
+        { name: 'Ace of Cups', suit: 'Cups', image: './cards/ace-of-cups.jpg', meaning: 'A tender opening arrives. Accept what is offered and let feeling become movement.' },
+        { name: 'Two of Cups', suit: 'Cups', image: './cards/two-of-cups.jpg', meaning: 'Reciprocity and mutual recognition are in play. Genuine connection can deepen the day.' },
+        { name: 'Three of Cups', suit: 'Cups', image: './cards/three-of-cups.jpg', meaning: 'Joy gathers in community. Let celebration and support restore your rhythm.' },
+        { name: 'Four of Cups', suit: 'Cups', image: './cards/four-of-cups.jpg', meaning: 'A quiet pause can feel like dissatisfaction, but it is also a moment of clear seeing.' },
+        { name: 'Five of Cups', suit: 'Cups', image: './cards/five-of-cups.jpg', meaning: 'Loss may be real, but the next source of comfort may already be nearby.' },
+        { name: 'Six of Cups', suit: 'Cups', image: './cards/six-of-cups.jpg', meaning: 'Nostalgia is a clue, not a command. Honor the past without being held back by it.' },
+        { name: 'Seven of Cups', suit: 'Cups', image: './cards/seven-of-cups.jpg', meaning: 'Options are abundant, but not all are equally true. Choose what is alive and honest.' },
+        { name: 'Eight of Cups', suit: 'Cups', image: './cards/eight-of-cups.jpg', meaning: 'It may be time to leave a familiar place behind for a more meaningful path.' },
+        { name: 'Nine of Cups', suit: 'Cups', image: './cards/nine-of-cups.jpg', meaning: 'Satisfaction is available when you allow yourself to receive what is already enough.' },
+        { name: 'Ten of Cups', suit: 'Cups', image: './cards/ten-of-cups.jpg', meaning: 'Belonging and emotional fulfillment are within reach. Let the day feel abundant.' },
+        { name: 'Page of Cups', suit: 'Cups', image: './cards/page-of-cups.jpg', meaning: 'An invitation to imagination, honesty, and tender curiosity is opening.' },
+        { name: 'Knight of Cups', suit: 'Cups', image: './cards/knight-of-cups.jpg', meaning: 'Follow the feeling, but do not let emotion carry you without direction.' },
+        { name: 'Queen of Cups', suit: 'Cups', image: './cards/queen-of-cups.jpg', meaning: 'Emotional depth and grace are your strengths. Lead with sensitivity and steadiness.' },
+        { name: 'King of Cups', suit: 'Cups', image: './cards/king-of-cups.jpg', meaning: 'Emotional maturity brings clarity. Respond with calm authority rather than reactivity.' },
+        { name: 'Ace of Pentacles', suit: 'Pentacles', image: './cards/ace-of-pentacles.jpg', meaning: 'A practical opportunity is taking root. Begin with what is tangible and real.' },
+        { name: 'Two of Pentacles', suit: 'Pentacles', image: './cards/two-of-pentacles.jpg', meaning: 'Balance is a practice. Keep your attention where the current needs it most.' },
+        { name: 'Three of Pentacles', suit: 'Pentacles', image: './cards/three-of-pentacles.jpg', meaning: 'Skill and teamwork create momentum. Collaboration will strengthen the work.' },
+        { name: 'Four of Pentacles', suit: 'Pentacles', image: './cards/four-of-pentacles.jpg', meaning: 'Security matters, but not at the cost of your own expansion.' },
+        { name: 'Five of Pentacles', suit: 'Pentacles', image: './cards/five-of-pentacles.jpg', meaning: 'Hard seasons can feel isolating, but support is available if you look for it.' },
+        { name: 'Six of Pentacles', suit: 'Pentacles', image: './cards/six-of-pentacles.jpg', meaning: 'Give and receive in balance. Reciprocity is part of the flow.' },
+        { name: 'Seven of Pentacles', suit: 'Pentacles', image: './cards/seven-of-pentacles.jpg', meaning: 'This is a season of review. The fruits are forming, even if you cannot fully see them yet.' },
+        { name: 'Eight of Pentacles', suit: 'Pentacles', image: './cards/eight-of-pentacles.jpg', meaning: 'Mastery grows through disciplined effort. Show up for the work, even in the small details.' },
+        { name: 'Nine of Pentacles', suit: 'Pentacles', image: './cards/nine-of-pentacles.jpg', meaning: 'Self-sufficiency and ease are available. Enjoy the fruit of your effort without guilt.' },
+        { name: 'Ten of Pentacles', suit: 'Pentacles', image: './cards/ten-of-pentacles.jpg', meaning: 'Legacy, stability, and abundance are all part of the picture. Build with the long view.' },
+        { name: 'Page of Pentacles', suit: 'Pentacles', image: './cards/page-of-pentacles.jpg', meaning: 'A practical curiosity opens a promising path. Keep learning and testing what works.' },
+        { name: 'Knight of Pentacles', suit: 'Pentacles', image: './cards/knight-of-pentacles.jpg', meaning: 'Steady effort and endurance will carry you farther than bursts of intensity.' },
+        { name: 'Queen of Pentacles', suit: 'Pentacles', image: './cards/queen-of-pentacles.jpg', meaning: 'Grounded abundance is your gift. Care and competence can create real stability.' },
+        { name: 'King of Pentacles', suit: 'Pentacles', image: './cards/king-of-pentacles.jpg', meaning: 'A secure foundation can support bold ambitions. Build with foresight and generosity.' },
+        { name: 'Ace of Swords', suit: 'Swords', image: './cards/ace-of-swords.jpg', meaning: 'An idea arrives with clarity. Truth cuts through confusion if you stay honest.' },
+        { name: 'Two of Swords', suit: 'Swords', image: './cards/two-of-swords.jpg', meaning: 'A stalemate asks for stillness and discernment. The decision may require patience.' },
+        { name: 'Three of Swords', suit: 'Swords', image: './cards/three-of-swords.jpg', meaning: 'Grief or conflict may be honest, but it is not permanent. Healing begins with naming it.' },
+        { name: 'Four of Swords', suit: 'Swords', image: './cards/four-of-swords.jpg', meaning: 'Rest is a strategic act, not a luxury. Recover before moving forward.' },
+        { name: 'Five of Swords', suit: 'Swords', image: './cards/five-of-swords.jpg', meaning: 'Conflict may signal a lesson in boundaries. Choose your battles with discernment.' },
+        { name: 'Six of Swords', suit: 'Swords', image: './cards/six-of-swords.jpg', meaning: 'A transition is underway. Move with intention, even if the full picture is still unclear.' },
+        { name: 'Seven of Swords', suit: 'Swords', image: './cards/seven-of-swords.jpg', meaning: 'Strategy is needed, but so is integrity. Watch where you are trying to outsmart reality.' },
+        { name: 'Eight of Swords', suit: 'Swords', image: './cards/eight-of-swords.jpg', meaning: 'What feels limiting is often a perception that can be reframed. Reclaim your agency.' },
+        { name: 'Nine of Swords', suit: 'Swords', image: './cards/nine-of-swords.jpg', meaning: 'Worry is loud, but it is not the full story. Speak the fear into the light.' },
+        { name: 'Ten of Swords', suit: 'Swords', image: './cards/ten-of-swords.jpg', meaning: 'A difficult ending is clearing space for renewal. What breaks open can release a burden.' },
+        { name: 'Page of Swords', suit: 'Swords', image: './cards/page-of-swords.jpg', meaning: 'Learning is active. Ask questions, gather evidence, and stay sharp.' },
+        { name: 'Knight of Swords', suit: 'Swords', image: './cards/knight-of-swords.jpg', meaning: 'Quick action can be necessary, but accuracy matters as much as speed.' },
+        { name: 'Queen of Swords', suit: 'Swords', image: './cards/queen-of-swords.jpg', meaning: 'Clear perception and emotional honesty can cut through confusion.' },
+        { name: 'King of Swords', suit: 'Swords', image: './cards/king-of-swords.jpg', meaning: 'Logic and authority can guide you through complexity. Stay precise and calm.' },
+        { name: 'Ace of Wands', suit: 'Wands', image: './cards/ace-of-wands.jpg', meaning: 'Creative ignition is here. Follow the spark before it fades.' },
+        { name: 'Two of Wands', suit: 'Wands', image: './cards/two-of-wands.jpg', meaning: 'A horizon is opening. Choose the direction that fits the future you want to build.' },
+        { name: 'Three of Wands', suit: 'Wands', image: './cards/three-of-wands.jpg', meaning: 'The work is beginning to unfold beyond your immediate reach. Trust the long view.' },
+        { name: 'Four of Wands', suit: 'Wands', image: './cards/four-of-wands.jpg', meaning: 'A moment of celebration and recognition is arriving. Make room for joy.' },
+        { name: 'Five of Wands', suit: 'Wands', image: './cards/five-of-wands.jpg', meaning: 'Competition can be energizing, but so can strategic collaboration. Choose your angle.' },
+        { name: 'Six of Wands', suit: 'Wands', image: './cards/six-of-wands.jpg', meaning: 'Recognition, confidence, and momentum are aligning. Step into the visibility you have earned.' },
+        { name: 'Seven of Wands', suit: 'Wands', image: './cards/seven-of-wands.jpg', meaning: 'Defend what matters without overextending yourself. Stand in principle rather than fear.' },
+        { name: 'Eight of Wands', suit: 'Wands', image: './cards/eight-of-wands.jpg', meaning: 'The pace is accelerating. Be ready for swift developments and act without delay.' },
+        { name: 'Nine of Wands', suit: 'Wands', image: './cards/nine-of-wands.jpg', meaning: 'You are close. Stay strong, but do not confuse resilience with endless self-protection.' },
+        { name: 'Ten of Wands', suit: 'Wands', image: './cards/ten-of-wands.jpg', meaning: 'Burden is real, but so is your capacity to lighten it. Ask what you can release.' },
+        { name: 'Page of Wands', suit: 'Wands', image: './cards/page-of-wands.jpg', meaning: 'Enthusiasm is a signal. Let your curiosity lead you toward the next brave experiment.' },
+        { name: 'Knight of Wands', suit: 'Wands', image: './cards/knight-of-wands.jpg', meaning: 'Movement and momentum are part of the message. Channel bold energy with direction.' },
+        { name: 'Queen of Wands', suit: 'Wands', image: './cards/queen-of-wands.jpg', meaning: 'Confidence is magnetic when paired with warmth and authenticity.' },
+        { name: 'King of Wands', suit: 'Wands', image: './cards/king-of-wands.jpg', meaning: 'Vision and determination create forward motion. Lead with clarity and courage.' }
+      ];
+
+      const cardEl = document.getElementById('card');
+      const cardImage = document.getElementById('cardImage');
+      const dateStamp = document.getElementById('dateStamp');
+      const cardTitle = document.getElementById('cardTitle');
+
+      function hashString(input) {
+        let hash = 2166136261;
+        for (let i = 0; i < input.length; i++) {
+          hash ^= input.charCodeAt(i);
+          hash = Math.imul(hash, 16777619);
+        }
+        return hash >>> 0;
+      }
+
+      function todayKey() {
+        const now = new Date();
+        return new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString().slice(0, 10);
+      }
+
+      function getDailyIndex() {
+        return hashString(todayKey()) % deck.length;
+      }
+
+      function renderCard(card, reversed = false, foil = false) {
+        cardImage.src = card.image;
+        cardImage.alt = card.name;
+
+        const titleBase = reversed ? `Reversed: ${card.name}` : card.name;
+        const titleSuffix = foil ? ' • foil' : '';
+        cardTitle.textContent = `${titleBase}${titleSuffix}`;
+
+        cardEl.classList.toggle('foil', foil);
+        cardEl.classList.toggle('reversed', reversed);
+        cardEl.classList.remove('is-flipped');
+        void cardEl.offsetWidth;
+        cardEl.classList.add('is-flipped');
+      }
+
+      function setTodayCard() {
+        const dailyIndex = getDailyIndex();
+        const card = deck[dailyIndex];
+        const reversed = hashString(`${todayKey()}-rev`) % 2 === 0;
+        const foil = hashString(`${todayKey()}-foil`) % 100 < 12;
+        renderCard(card, reversed, foil);
+      }
+
+      dateStamp.textContent = new Date().toLocaleDateString(undefined, {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+      });
+
+      setTodayCard();
+    </script>
   </body>
 </html>
